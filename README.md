@@ -6,6 +6,9 @@ sharing an edge are locally Delaunay.
 User can also restrict flipping the edges along the sharp creases by specifying
 the "Crease Angle".
 
+**License**
+As free as Air.
+
 **Testing incomplete**
-Wait for some time to completion ....
+Wait for some time for completion ....
 
