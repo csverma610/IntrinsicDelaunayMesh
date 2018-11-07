@@ -69,11 +69,11 @@ struct Edge {
 
     std::array<float,3> getCenter() const
     {
-	    std::array<float,3> p;
-	    p[0] = 0.5*(nodes[0]->xyz[0] + nodes[1]->xyz[0]);
-	    p[1] = 0.5*(nodes[0]->xyz[1] + nodes[1]->xyz[1]);
-	    p[2] = 0.5*(nodes[0]->xyz[2] + nodes[1]->xyz[2]);
-	    return p;
+        std::array<float,3> p;
+        p[0] = 0.5*(nodes[0]->xyz[0] + nodes[1]->xyz[0]);
+        p[1] = 0.5*(nodes[0]->xyz[1] + nodes[1]->xyz[1]);
+        p[2] = 0.5*(nodes[0]->xyz[2] + nodes[1]->xyz[2]);
+        return p;
     }
 
     bool active    = 1;
@@ -194,13 +194,16 @@ inline FacePtr Face:: newObject(NodePtr &n0, NodePtr &n1, NodePtr &n2)
 
 struct Mesh
 {
-    void refine( FacePtr &f, int type = 14);
-    void flip(   EdgePtr &e);
-    void makeConsistent( FacePtr &e);
+    void   refine( FacePtr &f, int type = 14);
+    int    flip(EdgePtr &e);
+    void   makeConsistent( FacePtr &e);
 
     EdgePtr addEdge( NodePtr &n0, NodePtr &n1, FacePtr &f);
     void    addFace( FacePtr &f);
     void    remove(FacePtr &f);
+    void    refine(int type);
+    size_t  flip();
+
     void    pruneAll();
 
     std::vector<NodePtr> nodes;
@@ -240,5 +243,4 @@ private:
     void selectNode( size_t id);
     void drawNodes();
     void drawFaces(int filled);
-    void refineAll();
 };

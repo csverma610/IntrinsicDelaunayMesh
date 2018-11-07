@@ -4,18 +4,18 @@
 int main(int argc, char **argv) {
 
 
-  assert( argc == 2);
-  QApplication application(argc, argv);
+    assert( argc == 2);
+    QApplication application(argc, argv);
 
-  // Instantiate the viewer.
-  IntrinsicDelaunay viewer;
+    // Instantiate the viewer.
+    IntrinsicDelaunay viewer;
 
-  viewer.setWindowTitle("MeshCutter");
-  viewer.readMesh( argv[1] );
+    viewer.setWindowTitle("MeshCutter");
+    viewer.readMesh( argv[1] );
 
-  // Make the viewer window visible on screen.
-  viewer.show();
+    // Make the viewer window visible on screen.
+    viewer.show();
 
-  // Run main loop.
-  return application.exec();
+    // Run main loop.
+    return application.exec();
 }
