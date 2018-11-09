@@ -8,11 +8,13 @@ User can also restrict flipping the edges along the sharp creases by specifying
 the "Crease Angle".
 
 ## Example
+Input Data
 ![alt text](./input.png "Title")
+Output Data
 ![alt text](./output.png "Title")
 
 
-##i License
+## License
 As free as Air.
 
 
