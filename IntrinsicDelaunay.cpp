@@ -1,6 +1,8 @@
 #include "IntrinsicDelaunay.h"
+#include <algorithm>
 
 using namespace std;
+
 #include <fstream>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -14,6 +16,7 @@ void IntrinsicDelaunay::init()
 
 EdgePtr Mesh:: addEdge( NodePtr &n0, NodePtr &n1, FacePtr &face)
 {
+    assert(n0 != n1);
     NodePtr vmin = std::min(n0,n1);
 
     for( auto oldedge : vmin->edges) {
@@ -23,7 +26,7 @@ EdgePtr Mesh:: addEdge( NodePtr &n0, NodePtr &n1, FacePtr &face)
         }
     }
 
-    EdgePtr newedge(new Edge(n0,n1));
+    auto newedge = std::make_shared<Edge>(n0,n1);
     newedge->faces[0] = face;
     vmin->edges.push_back(newedge);
     edges.push_back(newedge);
@@ -55,8 +58,8 @@ void Mesh:: makeConsistent( FacePtr &f)
             }
         }
         remove(f);
-        FacePtr f0 = Face::newObject(nodes[0], nodes[3], nodes[2]);
-        FacePtr f1 = Face::newObject(nodes[1], nodes[2], nodes[3]);
+        auto f0 = Face::newObject(nodes[0], nodes[3], nodes[2]);
+        auto f1 = Face::newObject(nodes[1], nodes[2], nodes[3]);
         addFace(f0);
         addFace(f1);
         return;
@@ -74,15 +77,17 @@ void Mesh:: makeConsistent( FacePtr &f)
             }
         }
         remove(f);
-        FacePtr f0 = Face::newObject( nodes[2], nodes[4], nodes[3]);
-        FacePtr f1 = Face::newObject( nodes[0], nodes[1], nodes[3]);
-        FacePtr f2 = Face::newObject( nodes[0], nodes[3], nodes[4]);
+        auto f0 = Face::newObject( nodes[2], nodes[4], nodes[3]);
+        auto f1 = Face::newObject( nodes[0], nodes[1], nodes[3]);
+        auto f2 = Face::newObject( nodes[0], nodes[3], nodes[4]);
         addFace(f0);
         addFace(f1);
         addFace(f2);
         return;
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 void IntrinsicDelaunay:: readMesh( const string &filename)
 {
@@ -164,11 +169,11 @@ void IntrinsicDelaunay:: readMesh( const string &filename)
         faces[3*i+0] = v0;
         faces[3*i+1] = v1;
         faces[3*i+2] = v2;
-        NodePtr n0   = mesh.nodes[v0];
-        NodePtr n1   = mesh.nodes[v1];
-        NodePtr n2   = mesh.nodes[v2];
-        FacePtr newface = Face::newObject(n0,n1,n2);
-        newface->id     = i;
+        auto n0  = mesh.nodes[v0];
+        auto n1  = mesh.nodes[v1];
+        auto n2  = mesh.nodes[v2];
+        auto newface = Face::newObject(n0,n1,n2);
+        newface->id  = i;
         mesh.addFace(newface);
     }
 }
@@ -195,15 +200,17 @@ void Mesh::addFace( FacePtr &newface)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
 void Mesh::remove( FacePtr &oldface)
 {
+    if( oldface->active == 0) return;
+
     for( int i = 0; i < 3; i++) {
         auto e = oldface->edges[i];
         if( e->faces[0] == oldface) {
             e->faces[0] = e->faces[1];
             e->faces[1] = nullptr;
-        }
-        if( e->faces[1] == oldface) {
+        } else if( e->faces[1] == oldface) {
             e->faces[1] = nullptr;
         }
     }
@@ -217,13 +224,20 @@ void Mesh::remove( FacePtr &oldface)
     }
 
     oldface->active = 0;
-
 }
+
+//
 ////////////////////////////////////////////////////////////////////////////////
+//
+
 int Mesh::flip( EdgePtr &e)
 {
-    if( !e->active ) return 1;
+    if( e == nullptr) return 1;
+    if( !e->active )  return 1;
     if( e->faces[0] == nullptr || e->faces[0] == nullptr) return 1;
+    if( e->faces[1] == nullptr)   return 1;
+    if( e->faces[0]->active == 0) return 1;
+    if( e->faces[1]->active == 0) return 1;
 
     auto n0  = e->nodes[0];
     auto n1  = e->nodes[1];
@@ -236,47 +250,68 @@ int Mesh::flip( EdgePtr &e)
 
     if( d0 < d1) return 1;
 
-    double theta0 = f0->getAngleAt(on0);
-    double theta1 = f1->getAngleAt(on1);
+    auto Area = [] ( const FacePtr &f) {
 
+    };
+
+    exit(0);
+
+    /*
+    double theta0 = f0->getAngleAt(n0);
+    double theta1 = f1->getAngleAt(n0);
     if( theta0 + theta1 < 180) return 1;
+    */
 
+    cout << "E1 = " << e << endl;
     remove(f0);
+    cout << "Step  = " << e << endl;
     remove(f1);
-
+    cout << "Step  = " << e << endl;
     f0 = Face::newObject(n0, on0, on1);
+    cout << "Step  = " << e << endl;
     f1 = Face::newObject(n1, on1, on0);
+    cout << "Step  = " << e << endl;
 
     addFace(f0);
+    cout << "Step  = " << e << endl;
     addFace(f1);
+    cout << "E2 = " << e << endl;
 
     e->active = 0;
     return 0;
 }
 
+//
 ////////////////////////////////////////////////////////////////////////////////
+//
 size_t Mesh::flip()
 {
+    cout << "Flip start " << endl;
     size_t numEdgesFlipped = 0;
     while(1) {
         size_t numEdges = edges.size();
         size_t nCount = 0;
         for( size_t i = 0; i < numEdges; i++) {
+            cout << i << " " << edges[i] << " " << numEdges << endl;
             int err = flip( edges[i] );
             if( !err) nCount++;
         }
         numEdgesFlipped += nCount;
         if( nCount == 0) break;
+	pruneAll();
     }
+    cout << "#Flipped : " << numEdgesFlipped << endl;
     return numEdgesFlipped;
 }
+//
 ////////////////////////////////////////////////////////////////////////////////
-
+//
 void Mesh::refine(FacePtr &f, int type)
 {
     assert(f);
 
-    if(f->active) {
+    if( !f->active ) return;
+
         if(f->getArea() > 1.0E-10) {
             remove(f);
 
@@ -294,10 +329,10 @@ void Mesh::refine(FacePtr &f, int type)
                     steiner[i] = edge->steinerNode;
                     assert( steiner[i] );
                 }
-                FacePtr f0 = Face::newObject( f->nodes[0], steiner[0], steiner[2]);
-                FacePtr f1 = Face::newObject( f->nodes[1], steiner[1], steiner[0]);
-                FacePtr f2 = Face::newObject( f->nodes[2], steiner[2], steiner[1]);
-                FacePtr f3 = Face::newObject( steiner[0],  steiner[1], steiner[2]);
+                auto f0 = Face::newObject( f->nodes[0], steiner[0], steiner[2]);
+                auto f1 = Face::newObject( f->nodes[1], steiner[1], steiner[0]);
+                auto f2 = Face::newObject( f->nodes[2], steiner[2], steiner[1]);
+                auto f3 = Face::newObject( steiner[0],  steiner[1], steiner[2]);
                 addFace(f0);
                 addFace(f1);
                 addFace(f2);
@@ -305,31 +340,62 @@ void Mesh::refine(FacePtr &f, int type)
             }
 
             if( type == 13) {
-                NodePtr newnode = Node::newObject();
-                newnode->xyz    = f->getCentroid();
-                newnode->id     = nodes.size();
+                auto newnode  = std::make_shared<Node>();
+                newnode->xyz  = f->getCentroid();
+                newnode->id   = nodes.size();
                 nodes.push_back(newnode);
 
-                FacePtr f0 = Face::newObject( f->nodes[0], f->nodes[1], newnode);
-                FacePtr f1 = Face::newObject( f->nodes[1], f->nodes[2], newnode);
-                FacePtr f2 = Face::newObject( f->nodes[2], f->nodes[0], newnode);
+                auto f0 = Face::newObject( f->nodes[0], f->nodes[1], newnode);
+                auto f1 = Face::newObject( f->nodes[1], f->nodes[2], newnode);
+                auto f2 = Face::newObject( f->nodes[2], f->nodes[0], newnode);
                 addFace(f0);
                 addFace(f1);
                 addFace(f2);
             }
         }
-    }
 }
-
+//
 ////////////////////////////////////////////////////////////////////////////////
+//
 void Mesh::refine(int type)
 {
     size_t numFaces = faces.size();
-    for( size_t i = 0; i < numFaces; i++)
-        refine( faces[i], type );
-}
-////////////////////////////////////////////////////////////////////////////////
+    for( size_t i = 0; i < numFaces; i++) refine( faces[i], type );
 
+    pruneAll();
+
+    cout << nodes.size() << " " << edges.size() << " " << faces.size() << endl;
+}
+//
+////////////////////////////////////////////////////////////////////////////////
+//
+void Node:: prune()
+{
+       edges.erase(std::remove_if(edges.begin(), edges.end(), [] (EdgePtr &e){ 
+                               if( e->active == 0) return 1;
+			       return 0; }), edges.end() );
+       faces.erase(std::remove_if(faces.begin(), faces.end(), [] (FacePtr &f){ 
+                               if( f->active == 0) return 1;
+			       return 0; }), faces.end() );
+}
+
+void Mesh::pruneAll()
+{
+	nodes.erase(std::remove_if(nodes.begin(), nodes.end(), [] (NodePtr &v){ 
+				if( v->active == 0) return 1;
+				return 0;}), nodes.end() );
+	edges.erase(std::remove_if(edges.begin(), edges.end(), [] (EdgePtr &e){ 
+				if( e->active == 0) return 1;
+				return 0;}), edges.end() );
+	faces.erase(std::remove_if(faces.begin(), faces.end(), [] (FacePtr &f){ 
+				if( f->active == 0) return 1;
+				return 0;}), faces.end() );
+
+   for( auto v: nodes) v->prune();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//
 void Mesh::saveAs( const std::string &filename)
 {
     ofstream ofile(filename.c_str(), ios::out);
@@ -412,7 +478,6 @@ void IntrinsicDelaunay::keyPressEvent( QKeyEvent *e)
         update();
         return;
     }
-
 
     if( e->key() == Qt::Key_Home) {
         qglviewer::Vec pos;
@@ -534,8 +599,6 @@ void IntrinsicDelaunay::drawFaces(int filled)
             }
         }
     }
-
-
 
     if( pickEntity == 2) {
         int id = this->selectedName();

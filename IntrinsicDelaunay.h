@@ -7,6 +7,7 @@
 #include <map>
 #include <set>
 #include <memory>
+#include <algorithm>
 
 #include <QGLViewer/qglviewer.h>
 #include <QKeyEvent>
@@ -30,6 +31,8 @@ struct Node
     std::array<float,3> xyz;
     std::vector<EdgePtr> edges;
     std::vector<FacePtr> faces;
+
+    void prune();
 };
 
 inline double length2( const NodePtr n0, const NodePtr &n1)
